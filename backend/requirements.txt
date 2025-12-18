@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+mysql-connector-python
+pandas
+numpy
+librosa
+joblib
+praat-parselmouth
+opencv-python
+fpdf
+matplotlib
+scikit-learn
