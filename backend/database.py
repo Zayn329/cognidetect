@@ -17,78 +17,52 @@ def init_db():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Create table with all required columns including memory_score
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS patient_history (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 patient_name VARCHAR(255),
                 timestamp DATETIME,
                 risk_score FLOAT,
+                memory_score FLOAT DEFAULT NULL,
+                speech_score FLOAT DEFAULT NULL,
+                eye_score FLOAT DEFAULT NULL,
                 notes TEXT
             )
         """)
         
-        # Migration checks
+        # Migration check: Ensure memory_score exists if the table was old
         cursor.execute("DESCRIBE patient_history")
         columns = [column[0] for column in cursor.fetchall()]
         
-        if 'speech_score' not in columns:
-            cursor.execute("ALTER TABLE patient_history ADD COLUMN speech_score FLOAT DEFAULT NULL")
-        
-        if 'eye_score' not in columns:
-            cursor.execute("ALTER TABLE patient_history ADD COLUMN eye_score FLOAT DEFAULT NULL")
+        if 'memory_score' not in columns:
+            cursor.execute("ALTER TABLE patient_history ADD COLUMN memory_score FLOAT DEFAULT NULL")
+            print("Migration: Added memory_score column.")
             
         conn.commit()
         conn.close()
-        print("Database initialized successfully.")
     except Exception as e:
-        print(f"Database Initialization Error: {e}")
+        print(f"Database Error: {e}")
 
-def save_multimodal_result(name, speech_s, eye_s, overall_s, notes=""):
+def save_multimodal_result(name, memory_s, speech_s, eye_s, overall_s, notes=""):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # --- MERGE LOGIC (Preserved from integrated_app.py) ---
-        # Look for a recent "Game" record to update
-        check_query = """
-            SELECT id, risk_score, notes FROM patient_history 
-            WHERE patient_name = %s 
-              AND notes LIKE 'Game:%' 
-              AND speech_score IS NULL
-              AND timestamp > DATE_SUB(NOW(), INTERVAL 1 DAY)
-            ORDER BY timestamp DESC LIMIT 1
+        # We now explicitly save all three biomarkers in one row
+        sql = """
+            INSERT INTO patient_history 
+            (patient_name, timestamp, risk_score, memory_score, speech_score, eye_score, notes) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(check_query, (name,))
-        row = cursor.fetchone()
+        val = (name, datetime.now(), overall_s, memory_s, speech_s, eye_s, notes)
+        cursor.execute(sql, val)
         
-        if row:
-            # Update existing Game record
-            record_id, game_risk, game_notes = row
-            final_risk = (float(game_risk) + float(overall_s)) / 2
-            new_notes = f"{game_notes} | {notes}"
-            
-            update_sql = """
-                UPDATE patient_history 
-                SET risk_score = %s, speech_score = %s, eye_score = %s, notes = %s, timestamp = %s
-                WHERE id = %s
-            """
-            val = (final_risk, speech_s, eye_s, new_notes, datetime.now(), record_id)
-            cursor.execute(update_sql, val)
-        else:
-            # Insert new record
-            sql = """
-                INSERT INTO patient_history 
-                (patient_name, timestamp, risk_score, speech_score, eye_score, notes) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """
-            val = (name, datetime.now(), overall_s, speech_s, eye_s, notes)
-            cursor.execute(sql, val)
-
         conn.commit()
         conn.close()
         return True
     except Exception as e:
-        print(f"DB Save Error: {e}")
+        print(f"Failed to save to DB: {e}")
         return False
 
 def get_history(patient_name):

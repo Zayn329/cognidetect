@@ -106,10 +106,20 @@ def run_eye_test(test_type: str):
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
+class SaveResultRequest(BaseModel):
+    patient_name: str
+    memory_score: float   # Added this
+    speech_score: float
+    eye_score: float
+    overall_score: float
+    notes: str
+
 @app.post("/api/save-result")
 def save_result(data: SaveResultRequest):
+    # Pass the memory_score to the database function
     success = save_multimodal_result(
         data.patient_name, 
+        data.memory_score, # Pass new score here
         data.speech_score, 
         data.eye_score, 
         data.overall_score, 
