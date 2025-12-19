@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import API from '../api';
-import { Mic, UploadCloud, AlertCircle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mic, UploadCloud, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Button } from './ui/button.tsx'; //
 
 const SpeechAnalysis = ({ setSpeechScore }) => {
   const [file, setFile] = useState(null);
@@ -29,7 +30,7 @@ const SpeechAnalysis = ({ setSpeechScore }) => {
       const { risk_score, details } = response.data;
       setResult(risk_score);
       setChunkDetails(details || []);
-      setSpeechScore(risk_score); // Update global state for the final report
+      setSpeechScore(risk_score); // Update global state for final report
     } catch (err) {
       setError("Analysis failed. Ensure backend is running and model is present.");
       console.error(err);
@@ -39,92 +40,101 @@ const SpeechAnalysis = ({ setSpeechScore }) => {
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-        <Mic className="text-blue-500" /> Step 1: Speech Biomarkers
+    <div className="p-8 bg-card rounded-3xl border border-border shadow-xl transition-all duration-300">
+      <h2 className="text-2xl font-black mb-6 flex items-center gap-3 text-foreground">
+        <Mic className="text-primary h-7 w-7" /> 
+        Step 1: Speech Biomarkers
       </h2>
       
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors">
+      {/* Upload Zone */}
+      <div className="border-2 border-dashed border-border rounded-2xl p-12 text-center bg-muted/20 hover:bg-muted/40 transition-all group cursor-pointer relative">
         <input 
           type="file" 
           accept=".wav,.mp3" 
           onChange={(e) => setFile(e.target.files[0])}
-          className="hidden" 
+          className="absolute inset-0 opacity-0 cursor-pointer" 
           id="audio-upload"
         />
-        <label htmlFor="audio-upload" className="cursor-pointer flex flex-col items-center">
-          <UploadCloud className="h-12 w-12 text-gray-400 mb-2" />
-          <span className="text-gray-600 font-medium">
-            {file ? file.name : "Click to upload Audio (Standard Passage)"}
+        <div className="flex flex-col items-center">
+          <div className="h-16 w-16 bg-background rounded-full flex items-center justify-center mb-4 border border-border group-hover:scale-110 transition-transform">
+            <UploadCloud className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+          <span className="text-foreground font-bold text-lg mb-1">
+            {file ? file.name : "Click to upload Audio"}
           </span>
-        </label>
+          <p className="text-muted-foreground text-sm">Standard clinical passage (.wav or .mp3)</p>
+        </div>
       </div>
 
-      <button
+      <Button
         onClick={handleAnalyze}
         disabled={loading || !file}
-        className={`mt-4 w-full py-3 rounded-lg font-semibold text-white transition-all
-          ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-md'}
-        `}
+        className="w-full h-14 mt-6 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
       >
-        {loading ? "Analyzing Jitter, Shimmer & Pauses..." : "Analyze Voice"}
-      </button>
+        {loading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="animate-spin h-5 w-5" /> 
+            Analyzing Biomarkers...
+          </div>
+        ) : "Analyze Voice"}
+      </Button>
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
+        <div className="mt-4 p-4 bg-destructive/10 text-destructive rounded-xl flex items-center gap-3 font-bold border border-destructive/20 animate-pulse">
           <AlertCircle className="h-5 w-5" /> {error}
         </div>
       )}
 
       {result !== null && (
-        <div className="mt-6 space-y-4">
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-600 font-medium text-lg">Diagnosis Report</span>
-              <span className="text-2xl font-bold text-blue-600">{result.toFixed(1)}% Risk</span>
+        <div className="mt-8 space-y-6 fade-in-up">
+          <div className="p-6 bg-muted/30 rounded-2xl border border-border relative overflow-hidden">
+            <div className="flex justify-between items-center mb-4 relative z-10">
+              <span className="text-muted-foreground font-bold uppercase tracking-tighter">Diagnosis Report</span>
+              <span className="text-4xl font-black text-primary">{result.toFixed(1)}% Risk</span>
             </div>
             
             {result > 50 ? (
-               <div className="p-3 bg-red-100 text-red-700 rounded-md flex items-center gap-2 font-bold">
-                 <AlertCircle /> HIGH RISK DETECTED
+               <div className="p-4 bg-destructive/10 text-destructive rounded-xl flex items-center gap-2 font-black border border-destructive/20 uppercase tracking-widest text-xs">
+                 <AlertCircle size={18} /> High Risk Detected
                </div>
             ) : (
-               <div className="p-3 bg-green-100 text-green-700 rounded-md flex items-center gap-2 font-bold">
-                 <CheckCircle /> LOW RISK / NORMAL
+               <div className="p-4 bg-accent/10 text-accent rounded-xl flex items-center gap-2 font-black border border-accent/20 uppercase tracking-widest text-xs">
+                 <CheckCircle size={18} /> Low Risk / Normal
                </div>
             )}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
           </div>
 
-          {/* CHUNK-BY-CHUNK DETAILS SECTION */}
+          {/* SECOND-BY-SECOND DETAILS */}
           {chunkDetails.length > 0 && (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="border border-border rounded-2xl overflow-hidden bg-card">
               <button 
                 onClick={() => setShowDetails(!showDetails)}
-                className="w-full flex justify-between items-center p-3 bg-gray-100 hover:bg-gray-200 transition-colors font-semibold text-gray-700"
+                className="w-full flex justify-between items-center p-5 bg-muted/50 hover:bg-muted transition-colors font-bold text-foreground text-sm"
               >
-                <span>See Second-by-Second Analysis</span>
-                {showDetails ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                <span>Clinical Breakdown</span>
+                {showDetails ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
               
               {showDetails && (
-                <div className="max-h-60 overflow-y-auto bg-white">
+                <div className="max-h-64 overflow-y-auto divide-y divide-border">
                   {chunkDetails.map((chunk, idx) => (
                     <div 
                       key={idx} 
-                      className={`p-3 border-b border-gray-100 flex justify-between items-center text-sm ${
-                        chunk.is_sick ? 'bg-red-50' : 'bg-green-50'
+                      className={`p-4 flex justify-between items-center text-sm transition-colors ${
+                        chunk.is_sick ? 'bg-destructive/5' : 'bg-accent/5'
                       }`}
                     >
-                      <span className="font-mono font-medium text-gray-600 w-24">
+                      <span className="font-mono font-bold text-muted-foreground w-20">
                         {chunk.time}
                       </span>
-                      <span className={`font-bold flex-1 px-4 ${
-                        chunk.is_sick ? 'text-red-600' : 'text-green-600'
+                      <span className={`font-black flex-1 px-4 tracking-tight ${
+                        chunk.is_sick ? 'text-destructive' : 'text-accent'
                       }`}>
-                        {chunk.is_sick ? "🔴 " : "🟢 "}{chunk.status}
+                        {chunk.is_sick ? "DETECTED" : "NORMAL"}
                       </span>
-                      <span className="text-gray-500 font-medium">
-                        Confidence: {chunk.confidence.toFixed(1)}%
+                      <span className="text-muted-foreground font-bold tabular-nums">
+                        {chunk.confidence.toFixed(1)}% CF
                       </span>
                     </div>
                   ))}

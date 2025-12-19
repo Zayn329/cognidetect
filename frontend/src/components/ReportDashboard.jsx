@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
-import { FileText, Save, Download, Brain, Mic, Eye, Loader2 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { 
+  FileText, Save, Download, Brain, Mic, Eye, Loader2, TrendingUp, AlertTriangle 
+} from 'lucide-react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine 
+} from 'recharts';
+import { Button } from './ui/button.tsx'; // Ensure this matches your Vite project path
 
 const ReportDashboard = ({ patientName, memoryScore, speechScore, eyeScore }) => {
   const [history, setHistory] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // 1. Multimodal Consensus Logic
   const mScore = memoryScore || 0;
   const sScore = speechScore || 0;
   const eScore = eyeScore || 0;
   
-  // Calculate Global Overall Risk
-  // We prioritize metrics that have data
   const activeScores = [mScore, sScore, eScore].filter(s => s > 0);
   const overall = activeScores.length > 0 
     ? activeScores.reduce((a, b) => a + b, 0) / activeScores.length 
@@ -21,13 +25,13 @@ const ReportDashboard = ({ patientName, memoryScore, speechScore, eyeScore }) =>
 
   const getNote = () => {
     const parts = [];
-    if (memoryScore > 0) parts.push("Memory");
-    if (speechScore > 0) parts.push("Speech");
-    if (eyeScore > 0) parts.push("Eye");
-    return parts.length > 0 ? `Multimodal (${parts.join(" + ")})` : "No Data";
+    if (mScore > 0) parts.push("Memory");
+    if (sScore > 0) parts.push("Speech");
+    if (eScore > 0) parts.push("Eye");
+    return parts.length > 0 ? `Multimodal (${parts.join(" + ")})` : "No Data Collected";
   };
 
-  // 2. Fetch Patient History for the Graph
+  // 2. Fetch History for Trend Graph
   useEffect(() => {
     if (patientName) {
       API.get(`/history/${patientName}`)
@@ -38,7 +42,7 @@ const ReportDashboard = ({ patientName, memoryScore, speechScore, eyeScore }) =>
 
   // 3. Save to Database
   const handleSave = async () => {
-    if (!patientName) return alert("Enter patient name first");
+    if (!patientName) return alert("Patient identity missing.");
     setSaving(true);
     try {
       await API.post('/save-result', {
@@ -49,123 +53,134 @@ const ReportDashboard = ({ patientName, memoryScore, speechScore, eyeScore }) =>
         overall_score: overall,
         notes: getNote()
       });
-      alert("Multimodal Diagnosis saved successfully!");
+      alert("Record saved to clinical database.");
+      // Refresh history to update the graph
       const res = await API.get(`/history/${patientName}`);
       setHistory(res.data);
     } catch (err) {
-        console.error(err);
-        alert("Failed to save result. Check console for details.");
+        alert("Save failed. Ensure the Python backend is connected.");
     } finally {
       setSaving(false);
     }
   };
 
+  // 4. Generate PDF Report
   const handleDownload = async () => {
-    if(!patientName) return alert("Please enter a patient name");
+    if(!patientName) return alert("Patient name required.");
+    setDownloading(true);
     try {
+        // Blob type is required for PDF binary data
         const response = await API.get(`/generate-report/${patientName}`, { responseType: 'blob' });
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `CogniDetect_Report_${patientName}.pdf`);
+        link.setAttribute('download', `CogniDetect_Report_${patientName.replace(/\s+/g, '_')}.pdf`);
         document.body.appendChild(link);
         link.click();
+        link.remove(); // Clean up DOM
     } catch (error) {
-        alert("Report generation failed. Ensure the patient has saved data.");
+        alert("Download failed. You must 'Save Official Record' before generating a PDF.");
+    } finally {
+        setDownloading(false);
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-2xl font-bold mb-8 flex items-center gap-3 text-slate-800">
-          <FileText className="text-indigo-600" /> Final Diagnostic Summary
+    <div className="space-y-8 fade-in-up">
+      {/* 1. MAIN SUMMARY PANEL */}
+      <div className="bg-card p-8 rounded-3xl border border-border shadow-xl relative overflow-hidden">
+        <h2 className="text-2xl font-black mb-8 flex items-center gap-3 text-foreground">
+          <FileText className="text-primary h-7 w-7" /> Diagnostic Summary
         </h2>
 
-        {/* Triple Metric Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="p-5 bg-purple-50 rounded-2xl border border-purple-100 text-center">
-            <Brain className="mx-auto mb-2 text-purple-600" size={24} />
-            <div className="text-xs text-purple-600 font-bold uppercase tracking-widest">Memory Risk</div>
-            <div className="text-3xl font-black text-purple-900">{mScore.toFixed(1)}%</div>
+          <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 text-center">
+            <Brain className="mx-auto mb-3 text-primary" size={28} />
+            <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-1">Memory Risk</div>
+            <div className="text-4xl font-black text-foreground">{mScore.toFixed(1)}%</div>
           </div>
           
-          <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100 text-center">
-            <Mic className="mx-auto mb-2 text-blue-600" size={24} />
-            <div className="text-xs text-blue-600 font-bold uppercase tracking-widest">Speech Risk</div>
-            <div className="text-3xl font-black text-blue-900">{sScore.toFixed(1)}%</div>
+          <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 text-center">
+            <Mic className="mx-auto mb-3 text-blue-500" size={28} />
+            <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-1">Speech Risk</div>
+            <div className="text-4xl font-black text-foreground">{sScore.toFixed(1)}%</div>
           </div>
 
-          <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100 text-center">
-            <Eye className="mx-auto mb-2 text-indigo-600" size={24} />
-            <div className="text-xs text-indigo-600 font-bold uppercase tracking-widest">Eye Risk</div>
-            <div className="text-3xl font-black text-indigo-900">{eScore.toFixed(1)}%</div>
+          <div className="p-6 bg-accent/5 rounded-2xl border border-accent/10 text-center">
+            <Eye className="mx-auto mb-3 text-accent" size={28} />
+            <div className="text-[10px] text-accent font-black uppercase tracking-widest mb-1">Ocular Risk</div>
+            <div className="text-4xl font-black text-foreground">{eScore.toFixed(1)}%</div>
           </div>
         </div>
 
-        {/* Overall Conclusion Card */}
-        <div className="bg-slate-900 text-white p-8 rounded-3xl mb-10 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+        {/* 2. OVERALL CONCLUSION */}
+        <div className="bg-slate-950 text-white p-8 rounded-3xl relative overflow-hidden border border-slate-800">
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
                 <div className="text-center md:text-left">
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Combined Multimodal Risk</p>
-                    <h3 className="text-5xl font-black">{overall.toFixed(1)}%</h3>
-                    <p className="text-indigo-400 text-sm mt-2 font-medium">{getNote()}</p>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Multimodal Consensus Index</p>
+                    <h3 className="text-6xl font-black text-gradient">{overall.toFixed(1)}%</h3>
+                    <p className="text-slate-400 text-sm mt-3 font-medium italic">{getNote()}</p>
                 </div>
-                <div className="flex flex-col gap-3 w-full md:w-auto">
-                    <button 
+                <div className="flex flex-col gap-4 w-full md:w-64">
+                    <Button 
                         onClick={handleSave}
                         disabled={saving || overall === 0}
-                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-indigo-50 transition-colors disabled:bg-slate-700"
+                        className="w-full h-12 rounded-xl font-bold bg-white text-slate-950 hover:bg-slate-200"
                     >
-                        {saving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                        Save Official Record
-                    </button>
-                    <button 
+                        {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" size={18} />}
+                        Save Record
+                    </Button>
+                    <Button 
                         onClick={handleDownload}
-                        className="flex items-center justify-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 transition-colors"
+                        disabled={downloading}
+                        variant="outline"
+                        className="w-full h-12 rounded-xl font-bold border-slate-700 text-white hover:bg-slate-900"
                     >
-                        <Download size={20} /> Generate PDF Report
-                    </button>
+                        {downloading ? <Loader2 className="animate-spin mr-2" /> : <Download className="mr-2" size={18} />}
+                        Generate PDF
+                    </Button>
                 </div>
             </div>
-            {/* Background Decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
         </div>
-
-        {/* History Visualization */}
-        {history.length > 0 && (
-          <div className="mt-10 pt-10 border-t border-gray-100">
-            <h3 className="text-lg font-bold mb-6 text-slate-700">📈 Patient Recovery / Decline Trend</h3>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="timestamp" 
-                    tickFormatter={(t) => new Date(t).toLocaleDateString()} 
-                    stroke="#94a3b8" 
-                    fontSize={12} 
-                  />
-                  <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                    labelFormatter={(t) => new Date(t).toLocaleString()} 
-                  />
-                  <ReferenceLine y={70} label={{ position: 'top', value: 'High Risk', fill: '#ef4444', fontSize: 10 }} stroke="#ef4444" strokeDasharray="5 5" />
-                  <Line 
-                    type="monotone" 
-                    dataKey="risk_score" 
-                    stroke="#4f46e5" 
-                    strokeWidth={4} 
-                    dot={{ r: 6, fill: '#4f46e5', strokeWidth: 2, stroke: '#fff' }} 
-                    activeDot={{ r: 8 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* 3. TREND VISUALIZATION */}
+      {history.length > 0 && (
+        <div className="bg-card p-8 rounded-3xl border border-border shadow-xl">
+          <h3 className="text-xl font-black mb-8 text-foreground flex items-center gap-2">
+            <TrendingUp className="text-primary" /> Longitudinal Health Trend
+          </h3>
+          <div className="h-80 w-full pr-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis 
+                  dataKey="timestamp" 
+                  tickFormatter={(t) => new Date(t).toLocaleDateString()} 
+                  stroke="hsl(var(--muted-foreground))" 
+                  fontSize={11} 
+                  fontWeight="bold"
+                />
+                <YAxis domain={[0, 100]} stroke="hsl(var(--muted-foreground))" fontSize={11} fontWeight="bold" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid #1e293b', color: '#f8fafc' }}
+                  labelFormatter={(t) => new Date(t).toLocaleString()} 
+                />
+                <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" label={{ position: 'top', value: 'Critical Risk', fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="overall_score" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={4} 
+                  dot={{ r: 6, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} 
+                  activeDot={{ r: 8, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

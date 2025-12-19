@@ -1,42 +1,89 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+@layer base {
+  :root {
+    --background: 222 84% 96%; /* Lighter, almost white blue */
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 205 90% 45%; /* Soft Light Blue */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 120 80% 90%; /* Vibrant Green for accents */
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 205 90% 45%;
+    --radius: 0.8rem;
   }
-  to {
-    transform: rotate(360deg);
+
+  .dark {
+    --background: 228 10% 10%; /* Dark Slate Blue */
+    --foreground: 210 40% 98%;
+    --card: 228 10% 14%;
+    --card-foreground: 210 40% 98%;
+    --popover: 228 10% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 205 90% 55%; /* Brighter Medical Blue */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 228 10% 20%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 228 10% 20%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 120 80% 55%; /* Brighter Green */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 228 10% 25%;
+    --input: 228 10% 20%;
+    --ring: 205 90% 55%;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+@layer utilities {
+  .animated-bg-pan {
+    background-size: 200% 200%;
+    animation: background-pan 30s ease-in-out infinite alternate;
+  }
+
+  .fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+    opacity: 0;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    animation: text-pan 5s ease-in-out infinite alternate;
+    background-size: 200% 100%;
   }
 }
 
-.card {
-  padding: 2em;
+@keyframes background-pan {
+  from { background-position: 0% 0%; }
+  to { background-position: 100% 100%; }
 }
 
-.read-the-docs {
-  color: #888;
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes text-pan {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
 }

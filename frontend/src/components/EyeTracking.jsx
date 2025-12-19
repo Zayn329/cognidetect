@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import API from '../api';
-import { Eye, Target, MousePointer2 } from 'lucide-react';
+import { Eye, Target, MousePointer2, Loader2 } from 'lucide-react';
 
 const EyeTracking = ({ eyeScore, setEyeScore }) => {
   const [loading, setLoading] = useState(false);
@@ -8,24 +8,24 @@ const EyeTracking = ({ eyeScore, setEyeScore }) => {
 
   const runTest = async (type) => {
     setLoading(true);
-    setStatusMsg(`Running ${type} test... Please look at the popup window.`);
+    setStatusMsg(`Running ${type} test... Please focus on the tracker window.`);
     
     try {
-      // This request will hang until the Python window closes
       const response = await API.post(`/test-eye/${type}`);
-      const { score, details } = response.data;
+      // Ensure score is treated as a number
+      const scoreValue = typeof response.data.score === 'number' ? response.data.score : 0;
+      const details = response.data.details || "Test finished.";
       
-      // Update score: Average if previous exists, else set new
       if (eyeScore !== null) {
-        setEyeScore((eyeScore + score) / 2);
+        setEyeScore((eyeScore + scoreValue) / 2);
       } else {
-        setEyeScore(score);
+        setEyeScore(scoreValue);
       }
       
-      setStatusMsg(`Test Complete. Score: ${score.toFixed(1)}%. ${details}`);
+      setStatusMsg(`Test Complete. Risk: ${scoreValue.toFixed(1)}%. ${details}`);
     } catch (err) {
       console.error(err);
-      setStatusMsg("Error: Could not connect to eye tracker.");
+      setStatusMsg("Error: Connection lost with eye tracker.");
     } finally {
       setLoading(false);
     }
@@ -33,53 +33,55 @@ const EyeTracking = ({ eyeScore, setEyeScore }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-          <Eye className="text-purple-500" /> Step 2: Oculomotor Response
+      <div className="bg-card p-8 rounded-3xl border border-border shadow-xl">
+        <h2 className="text-2xl font-black mb-4 flex items-center gap-3">
+          <Eye className="text-primary h-7 w-7" /> 
+          Step 2: Ocular Response Analysis
         </h2>
-        <p className="text-gray-500 mb-6">Tests will open a separate camera window on your screen.</p>
+        <p className="text-muted-foreground mb-8">Testing saccadic movement and focus stability.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Focus Test */}
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 flex flex-col items-center text-center">
-            <Target className="h-8 w-8 text-blue-600 mb-2" />
-            <h3 className="font-bold text-gray-800">Focus Stability</h3>
-            <p className="text-xs text-gray-500 mb-4">Keep gaze fixed on red dot (10s)</p>
+          {/* Focus Stability Card */}
+          <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col items-center text-center">
+            <Target className="h-10 w-10 text-primary mb-3" />
+            <h3 className="font-bold text-foreground">Gaze Fixation</h3>
+            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">Keep gaze fixed on the red target for 10 seconds.</p>
             <button 
               onClick={() => runTest('focus')} 
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-400"
+              className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground transition-all"
             >
-              {loading ? "Running..." : "Start Focus Test"}
+              {loading ? <Loader2 className="animate-spin mx-auto h-5 w-5" /> : "Start Focus Test"}
             </button>
           </div>
 
-          {/* Follow Test */}
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 flex flex-col items-center text-center">
-            <MousePointer2 className="h-8 w-8 text-purple-600 mb-2" />
-            <h3 className="font-bold text-gray-800">Follow Dot</h3>
-            <p className="text-xs text-gray-500 mb-4">Track moving object (10s)</p>
+          {/* Saccadic Follow Card */}
+          <div className="p-6 bg-accent/5 rounded-2xl border border-accent/10 flex flex-col items-center text-center">
+            <MousePointer2 className="h-10 w-10 text-accent mb-3" />
+            <h3 className="font-bold text-foreground">Saccadic Follow</h3>
+            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">Track the moving object across the screen grid.</p>
             <button 
               onClick={() => runTest('follow')}
               disabled={loading}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 disabled:bg-gray-400"
+              className="w-full py-3 bg-accent text-slate-900 rounded-xl font-bold text-sm hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground transition-all"
             >
-              {loading ? "Running..." : "Start Follow Test"}
+              {loading ? <Loader2 className="animate-spin mx-auto h-5 w-5" /> : "Start Follow Test"}
             </button>
           </div>
 
-          {/* Score Display */}
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-center text-center">
-            <h3 className="font-bold text-gray-600 mb-2">Current Eye Risk</h3>
-            <div className="text-4xl font-extrabold text-gray-800">
+          {/* Ocular Risk Score Display */}
+          <div className="p-6 bg-muted/30 rounded-2xl border border-border flex flex-col items-center justify-center text-center">
+            <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-tighter mb-2">Ocular Risk Score</h3>
+            <div className="text-5xl font-black text-foreground">
+              {/* Null guard added here to prevent toFixed crash */}
               {eyeScore !== null ? `${eyeScore.toFixed(1)}%` : "--"}
             </div>
-            <p className="text-xs text-gray-400 mt-2">Run tests to calculate</p>
+            <p className="text-xs text-muted-foreground mt-4">Calculated from gaze jitter.</p>
           </div>
         </div>
         
         {statusMsg && (
-          <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm text-center">
+          <div className="mt-6 p-4 bg-primary/10 text-primary rounded-xl text-sm font-bold text-center border border-primary/20 animate-pulse">
             {statusMsg}
           </div>
         )}

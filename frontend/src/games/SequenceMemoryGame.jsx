@@ -71,11 +71,13 @@ const SequenceMemoryGame = ({ onFinish }) => {
         const newLives = lives - 1;
         setLives(newLives);
         if (newLives <= 0) {
-          // Calculate Risk: Higher Level = Lower Risk
           const finalRisk = Math.max(0, 100 - (level * 7)); 
           setRoundMessage(`Test finished. Risk Score: ${finalRisk.toFixed(1)}%`);
           setPhase("gameOver");
-          setTimeout(() => onFinish(finalRisk), 2500); // Send to App controller
+          // This calls the function in App.jsx to move to the next game
+          setTimeout(() => {
+            if (onFinish) onFinish(finalRisk);
+          }, 2500); 
         } else {
           setRoundMessage(`Incorrect. ${newLives} lives left.`);
           setPhase("result");
@@ -94,7 +96,6 @@ const SequenceMemoryGame = ({ onFinish }) => {
     }, 600);
   };
 
-  // UI Helper for styles
   const getCellStyle = (index) => {
     const base = "h-24 w-24 rounded-2xl border border-slate-700 transition-all duration-150 ";
     if (phase === "showing" && index === activeCell) return base + "bg-green-400 shadow-[0_0_20px_rgba(74,222,128,0.7)] scale-105";
@@ -115,7 +116,7 @@ const SequenceMemoryGame = ({ onFinish }) => {
 
   return (
     <div className="p-8 bg-slate-900 rounded-3xl text-white border border-slate-800 flex gap-10">
-      <div className="flex-1">
+      <div className="flex-1 relative">
         <div className="flex justify-between items-end mb-6">
             <div>
                 <p className="text-xs uppercase tracking-widest text-slate-500">Current Level</p>
@@ -124,12 +125,12 @@ const SequenceMemoryGame = ({ onFinish }) => {
             <p className="text-sm text-slate-400 italic">{roundMessage}</p>
         </div>
         
-        <div className="grid grid-cols-3 gap-4 bg-slate-950 p-6 rounded-3xl border border-slate-800">
+        <div className="grid grid-cols-3 gap-4 bg-slate-950 p-6 rounded-3xl border border-slate-800 relative">
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className={getCellStyle(i)} onClick={() => handleCellClick(i)} />
           ))}
           {(phase === "idle" || phase === "result") && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-3xl">
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-3xl z-20">
               <button onClick={startRound} className="bg-white text-slate-900 px-8 py-3 rounded-full font-bold shadow-xl">Start Next Round</button>
             </div>
           )}
@@ -141,7 +142,7 @@ const SequenceMemoryGame = ({ onFinish }) => {
         <div className="space-y-3">
           {[...Array(INITIAL_LIVES)].map((_, i) => (
             <div key={i} className={`h-12 w-12 rounded-xl border flex items-center justify-center ${i < lives ? 'bg-red-500 border-red-400' : 'bg-slate-800 border-slate-700'}`}>
-              <span className="text-xl">♥</span>
+              <span className="text-xl text-white">♥</span>
             </div>
           ))}
         </div>
