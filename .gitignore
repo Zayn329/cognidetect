@@ -1,6 +1,7 @@
 # Node dependencies
 frontend/node_modules/
 frontend/dist/
+.env
 
 # Python virtual environments & cache
 backend/__pycache__/
