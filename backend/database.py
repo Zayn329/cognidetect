@@ -1,6 +1,7 @@
 import mysql.connector
 from datetime import datetime
 import pandas as pd
+import numpy as np
 
 DB_CONFIG = {
     'user': 'root',

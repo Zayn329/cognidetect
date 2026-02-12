@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from "./lib/firebase.js"; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import API from './api'; 
 
 // UI Components
 import { Button } from './components/ui/button.tsx';
@@ -21,24 +22,34 @@ import SequenceMemoryGame from './games/SequenceMemoryGame.jsx';
 import NumberMemoryGame from './games/NumberMemoryGame.jsx';
 import SpeechAnalysis from './components/SpeechAnalysis';
 import EyeTracking from './components/EyeTracking.jsx';
-import ReportDashboard from './components/ReportDashboard';
+import ReportDashboard from './components/ReportDashboard'; 
+import PhonologyGame from './components/PhonologyGame'; 
+import ReadingTest from './components/ReadingTest'; 
+import HandwritingTest from './components/HandwritingTest'; // <--- NEW IMPORT
 import LoginPage from './components/auth/LoginPage.jsx';
 import LandingPage from './components/LandingPage.jsx';
 
 function App() {
-  // 1. AUTH & NAVIGATION STATE
+  // 1. AUTH STATE
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
 
-  // 2. WORKFLOW STATE (The "Wizard")
-  const [step, setStep] = useState("intro"); // "intro", "sequence", "number", "multimodal"
-  const [subTab, setSubTab] = useState("speech");
+  // 2. WORKFLOW STATE
+  // Default is "multimodal" to skip memory games for testing
+  const [step, setStep] = useState("multimodal"); 
+  const [subTab, setSubTab] = useState("report"); 
 
   // 3. DIAGNOSTIC DATA
   const [memoryScores, setMemoryScores] = useState({ sequence: 0, number: 0 });
   const [speechScore, setSpeechScore] = useState(null);
   const [eyeScore, setEyeScore] = useState(null);
+  
+  // 4. DYSLEXIA DATA
+  const [phonologyScore, setPhonologyScore] = useState(0);
+  const [readingScore, setReadingScore] = useState(0);
+  // 🔥 THIS WAS MISSING. I HAVE ADDED IT NOW:
+  const [writingScore, setWritingScore] = useState(0); 
 
   // Listen for Firebase Auth changes
   useEffect(() => {
@@ -49,18 +60,15 @@ function App() {
     return unsubscribe;
   }, [initializing]);
 
-  // Loading Screen while Firebase initializes
   if (initializing) return <Loading />;
 
-  // 🛡️ PUBLIC ROUTING (If not logged in)
+  // PUBLIC ROUTING
   if (!user) {
-    if (showLogin) {
-      return <LoginPage onBack={() => setShowLogin(false)} />;
-    }
+    if (showLogin) return <LoginPage onBack={() => setShowLogin(false)} />;
     return <LandingPage onGetStarted={() => setShowLogin(true)} />;
   }
 
-  // --- LOGIC: Handle Game Transitions & Data Handover ---
+  // --- LOGIC: Handle Transitions ---
   const handleSequenceFinish = (score) => {
     setMemoryScores(prev => ({ ...prev, sequence: score }));
     setStep("number");
@@ -71,15 +79,43 @@ function App() {
     setStep("multimodal");
   };
 
+  // --- DYSLEXIA WORKFLOW LOGIC ---
+  const handleDyslexiaFinish = async (type, scoreValue) => {
+    console.log(`Finished ${type} with score: ${scoreValue}`);
+    
+    if (type === 'phonology') {
+      setPhonologyScore(scoreValue);
+      setStep("reading_test"); 
+
+    } else if (type === 'reading') {
+      setReadingScore(scoreValue);
+      setStep("writing_test"); // Go to Writing Test
+
+    } else if (type === 'writing') {
+      setWritingScore(scoreValue);
+      setStep("multimodal"); // Back to Dashboard
+      setSubTab("report");
+    }
+    
+    // Attempt to sync to DB (Silent fail if offline)
+    try {
+        if(user?.displayName) {
+             await API.get(`/history/${user.displayName}`);
+        }
+    } catch (err) {
+        console.warn("Background sync failed:", err);
+    }
+  };
+
   const avgMemoryRisk = (memoryScores.sequence + memoryScores.number) / 2;
 
-  // 🚀 PRIVATE DASHBOARD (The "Wizard" Flow)
+  // 🚀 PRIVATE DASHBOARD
   return (
     <div className="flex min-h-screen bg-background font-sans transition-colors duration-500">
       <Sidebar patientName={user.displayName || "Patient"} />
 
       <main className="ml-64 flex-1 p-8 relative">
-        {/* TOP NAV: User Context & Sign Out */}
+        {/* TOP NAV */}
         <div className="absolute top-8 right-8 flex items-center gap-4">
             <div className="text-right">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">Current User</p>
@@ -90,7 +126,7 @@ function App() {
             </Button>
         </div>
 
-        {/* PROGRESS HEADER */}
+        {/* HEADER */}
         <div className="max-w-4xl mx-auto mb-10">
             <header className="mb-8">
                 <h1 className="text-4xl font-black text-slate-900 flex items-center gap-3">
@@ -100,13 +136,15 @@ function App() {
                 <p className="text-muted-foreground font-medium">Step-by-step cognitive biomarker screening.</p>
             </header>
             
-            {/* Visual Progress Stepper */}
-            <div className="flex gap-3">
-                <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['intro', 'sequence', 'number', 'multimodal'].indexOf(step) >= 0 ? 'bg-primary' : 'bg-muted'}`} />
-                <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['sequence', 'number', 'multimodal'].indexOf(step) >= 1 ? 'bg-primary' : 'bg-muted'}`} />
-                <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['number', 'multimodal'].indexOf(step) >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-                <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${step === 'multimodal' ? 'bg-accent' : 'bg-muted'}`} />
-            </div>
+            {/* PROGRESS STEPPER */}
+            {step !== "dyslexia_test" && step !== "reading_test" && step !== "writing_test" && (
+                <div className="flex gap-3">
+                    <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['intro', 'sequence', 'number', 'multimodal'].includes(step) ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['sequence', 'number', 'multimodal'].includes(step) ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['number', 'multimodal'].includes(step) ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${step === 'multimodal' ? 'bg-accent' : 'bg-muted'}`} />
+                </div>
+            )}
         </div>
 
         <div className="max-w-4xl mx-auto">
@@ -118,9 +156,6 @@ function App() {
                         <Brain className="h-10 w-10 text-primary" />
                     </div>
                     <h2 className="text-3xl font-bold mb-4">Start Clinical Screening</h2>
-                    <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                        Welcome, <b>{user.displayName}</b>. We will begin with short-term visual and numeric memory games, followed by multimodal analysis.
-                    </p>
                     <Button onClick={() => setStep("sequence")} size="lg" className="rounded-full px-12 py-6 text-lg font-bold shadow-xl shadow-primary/20">
                         Begin Sequence Test <ArrowRight className="ml-2" />
                     </Button>
@@ -129,20 +164,13 @@ function App() {
             </div>
           )}
 
-          {/* PHASE 1: SEQUENTIAL GAMES */}
-          {step === "sequence" && (
-            <SequenceMemoryGame onFinish={handleSequenceFinish} />
-          )}
+          {/* PHASE 1 & 2: MEMORY GAMES */}
+          {step === "sequence" && <SequenceMemoryGame onFinish={handleSequenceFinish} />}
+          {step === "number" && <NumberMemoryGame onFinish={handleNumberFinish} />}
 
-          {/* PHASE 2: NUMERIC GAMES */}
-          {step === "number" && (
-            <NumberMemoryGame onFinish={handleNumberFinish} />
-          )}
-
-          {/* PHASE 3: MULTIMODAL TESTING */}
+          {/* PHASE 3: MULTIMODAL TESTING (Dashboard) */}
           {step === "multimodal" && (
             <div className="space-y-6">
-              {/* Internal Navigation for Tests */}
               <div className="bg-muted p-1.5 rounded-2xl inline-flex border border-border">
                 {[
                   { id: "speech", icon: <Mic size={18}/>, label: "Speech" },
@@ -163,24 +191,59 @@ function App() {
                 ))}
               </div>
 
-              {/* Multimodal Component Rendering with Animation */}
               <div className="fade-in-up">
                 {subTab === "speech" && <SpeechAnalysis setSpeechScore={setSpeechScore} />}
-                
-                {/* Null guards integrated to prevent toFixed() crash */}
                 {subTab === "eye" && <EyeTracking eyeScore={eyeScore} setEyeScore={setEyeScore} />}
-                
                 {subTab === "report" && (
                     <ReportDashboard 
                         patientName={user.displayName}
                         memoryScore={avgMemoryRisk} 
                         speechScore={speechScore} 
                         eyeScore={eyeScore} 
+                        // Dyslexia Props
+                        phonologyScore={phonologyScore}
+                        readingScore={readingScore}
+                        // We map "Writing Score" to RAN/Processing for now
+                        writingScore={writingScore} 
+                        onStartDyslexia={() => setStep("dyslexia_test")}
                     />
                 )}
               </div>
             </div>
           )}
+
+          {/* PHASE 4: DYSLEXIA MODULE (Phonology) */}
+          {step === "dyslexia_test" && (
+            <div className="fade-in-up">
+              <Button variant="ghost" onClick={() => setStep("multimodal")} className="mb-4">
+                 ← Back to Dashboard
+              </Button>
+              <PhonologyGame 
+                  patientName={user.displayName}
+                  onComplete={(score) => handleDyslexiaFinish('phonology', score)}
+              />
+            </div>
+          )}
+
+          {/* PHASE 5: DYSLEXIA MODULE (Reading) */}
+          {step === "reading_test" && (
+            <div className="fade-in-up">
+              <ReadingTest 
+                  patientName={user.displayName}
+                  onFinish={(score) => handleDyslexiaFinish('reading', score)}
+              />
+            </div>
+          )}
+
+          {/* PHASE 6: DYSLEXIA MODULE (Writing) */}
+          {step === "writing_test" && (
+            <div className="fade-in-up">
+              <HandwritingTest 
+                  onFinish={(score) => handleDyslexiaFinish('writing', score)}
+              />
+            </div>
+          )}
+
         </div>
       </main>
     </div>
