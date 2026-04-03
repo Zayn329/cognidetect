@@ -48,7 +48,7 @@ def calculate_velocity_and_predict(history_data):
 
 def get_ai_preventative_advice(history, trend, prediction):
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
         You are the 'Sentinel AI' for CogniDetect. 
         A patient's cognitive risk history is: {history.tolist()}.
