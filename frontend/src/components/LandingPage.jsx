@@ -304,7 +304,7 @@ export default function LandingPage({ onGetStarted }) {
       </nav>
 
       {/* 2. HERO SECTION */}
-      <section className="relative isolate overflow-hidden min-h-[46vh] md:min-h-[50vh] lg:min-h-[56vh]">
+      <section className="relative isolate overflow-hidden min-h-[calc(50vh+1px)] md:min-h-[calc(54vh+1px)] lg:min-h-[calc(60vh+1px)]">
         <div className="absolute inset-0 -z-40 bg-slate-950" aria-hidden="true" />
         <video
           className="absolute inset-0 -z-30 h-full w-full object-cover object-[72%_48%] opacity-65 sm:object-[70%_46%] lg:object-[68%_44%]"
@@ -319,7 +319,7 @@ export default function LandingPage({ onGetStarted }) {
         <div className="absolute inset-0 -z-20 bg-[linear-gradient(108deg,rgba(2,6,23,0.97)_8%,rgba(2,6,23,0.92)_34%,rgba(2,6,23,0.86)_64%,rgba(2,6,23,0.95)_100%)]" aria-hidden="true" />
         <div className="absolute inset-0 -z-10 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:70px_70px]" aria-hidden="true" />
 
-        <div className="container mx-auto flex min-h-[46vh] items-center justify-start px-4 py-6 sm:min-h-[50vh] sm:px-6 sm:py-7 lg:min-h-[56vh] lg:px-8 lg:py-8">
+        <div className="container mx-auto flex min-h-[50vh] items-center justify-start px-4 py-8 sm:min-h-[54vh] sm:px-6 sm:py-9 lg:min-h-[60vh] lg:px-8 lg:py-10">
           <div className="fade-in-up w-full max-w-xl text-left">
             <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/80 sm:text-[10px]">
               <Sparkles className="h-4 w-4 text-cyan-300" />

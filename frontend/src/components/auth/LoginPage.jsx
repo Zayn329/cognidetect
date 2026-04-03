@@ -14,7 +14,7 @@ const GoogleIcon = (props) => (
   </svg>
 );
 
-export default function LoginPage() {
+export default function LoginPage({ onBack }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -79,9 +79,18 @@ export default function LoginPage() {
 
           <main className="flex items-center justify-center p-6 sm:p-10 lg:p-14">
             <div className="w-full max-w-md">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Secure sign in
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back
+                </button>
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  Secure sign in
+                </div>
               </div>
 
               <h3 className="mt-5 text-3xl font-black text-slate-950 dark:text-white">Welcome back</h3>
