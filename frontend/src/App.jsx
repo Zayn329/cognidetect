@@ -30,15 +30,15 @@ import ReadingTest from './components/ReadingTest';
 import HandwritingTest from './components/HandwritingTest'; 
 import LoginPage from './components/auth/LoginPage.jsx';
 import LandingPage from './components/LandingPage.jsx';
-
-// 🔥 NEW: Import the Hospital Dashboard
-import DoctorDashboard from './components/DoctorDashboard.jsx'; 
+import Chatbot from './components/Chatbot.jsx';
+import Subscription from './components/Subscription.jsx'; 
 
 function App() {
   // 1. AUTH STATE
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
 
   // 2. WORKFLOW STATE
   // 🔥 NEW STATE: Toggle between Consumer App and Hospital B2B App
@@ -68,10 +68,20 @@ function App() {
 
   if (initializing) return <Loading />;
 
-  // PUBLIC ROUTING
+  // PUBLIC ROUTING - Show Subscription if requested
   if (!user) {
-    if (showLogin) return <LoginPage onBack={() => setShowLogin(false)} />;
-    return <LandingPage onGetStarted={() => setShowLogin(true)} />;
+    return (
+      <>
+        {showSubscription ? (
+          <Subscription />
+        ) : showLogin ? (
+          <LoginPage onBack={() => setShowLogin(false)} />
+        ) : (
+          <LandingPage onGetStarted={() => setShowLogin(true)} onViewPricing={() => setShowSubscription(true)} />
+        )}
+        <Chatbot />
+      </>
+    );
   }
 
   // --- LOGIC: Handle Transitions ---
@@ -124,6 +134,27 @@ function App() {
         {/* TOP NAV & MODE TOGGLE */}
         <div className="absolute top-8 right-8 flex items-center gap-6 z-50">
             
+            {/* Subscription Button */}
+            {!showSubscription && (
+              <Button
+                onClick={() => setShowSubscription(true)}
+                className="bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-600 hover:to-emerald-600 text-white rounded-full px-6 font-bold shadow-lg shadow-cyan-500/40"
+              >
+                Upgrade to Premium
+              </Button>
+            )}
+
+            {/* Close Subscription Button */}
+            {showSubscription && (
+              <Button
+                onClick={() => setShowSubscription(false)}
+                variant="ghost"
+                className="text-slate-300 hover:text-white"
+              >
+                ← Back
+              </Button>
+            )}
+            
             {/* 🔥 THE HACKATHON PITCH TOGGLE 🔥 */}
             <div className="bg-slate-200/50 p-1 rounded-xl flex items-center shadow-inner">
               <button 
@@ -151,10 +182,12 @@ function App() {
             </Button>
         </div>
 
-        {/* ========================================= */}
-        {/* VIEW 1: B2B HOSPITAL DASHBOARD (OMNI-TRIAGE) */}
-        {/* ========================================= */}
-        {appMode === "doctor" ? (
+        {/* Show subscription page if requested */}
+        {showSubscription ? (
+          <div className="pt-16">
+            <Subscription />
+          </div>
+        ) : appMode === "doctor" ? (
           <div className="pt-16 fade-in-up">
             <DoctorDashboard />
           </div>
@@ -277,6 +310,9 @@ function App() {
         </div>
         )}
       </main>
+
+      {/* Show Chatbot on all pages */}
+      <Chatbot />
     </div>
   );
 }

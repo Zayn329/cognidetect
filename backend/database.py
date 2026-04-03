@@ -5,9 +5,10 @@ import numpy as np
 
 DB_CONFIG = {
     'user': 'root',
-    'password': ' ',       # Your MariaDB password (keep empty string if none)
+    'password': 'aman',       # Your MariaDB password (keep empty string if none)
     'host': 'localhost',
-    'database': 'alzheimer_db'
+    'database': 'alzheimer_db',
+    
 }
 
 def get_db_connection():
