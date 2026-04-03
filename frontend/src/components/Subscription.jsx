@@ -135,7 +135,7 @@ export default function Subscription() {
     {
       name: 'Premium Pro',
       price: '₹999',
-      period: 'Per Month',
+      period: 'Per Year',
       description: 'Unlock full potential with advanced features',
       features: [
         { text: 'Unlimited assessments', included: true },
