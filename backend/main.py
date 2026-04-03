@@ -7,10 +7,11 @@ from pydantic import BaseModel
 from typing import Optional
 import shutil
 import os
+from services.eye_tracker import run_focus_test, run_follow_dot_test
+from services.scoring import get_focus_score, get_follow_dot_score
 from services.triage_agent import run_triage_agent
 import cv2
 import mysql.connector
-
 
 # --- SERVICES ---
 from eye_reader import detect_pupil_x
@@ -20,7 +21,6 @@ from services.handwriting import analyze_handwriting
 from services.report import create_report as create_dementia_report
 from services.report_dyslexia import create_dyslexia_report # The new file
 from services.sentinel_agent import calculate_velocity_and_predict
-from fastapi import Query 
 app = FastAPI()
 
 app.add_middleware(
@@ -245,18 +245,14 @@ def trigger_omni_triage():
         if 'cursor' in locals(): cursor.close()
         if 'conn' in locals() and conn.is_connected(): conn.close()
 @app.get("/api/agent/predict/{patient_name}")
-def get_patient_prediction(patient_name: str, type: str = Query("dementia")):
-    conn = mysql.connector.connect(**DB_CONFIG) # Ensure your DB connection matches your setup
+def get_patient_prediction(patient_name: str):
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
     try:
-        # Fetch all columns so the Python math script can sort it out
-        # Fetch all columns so the Python math script can sort it out
+        # Fetch all historical scores for this patient, oldest to newest
         query = """
-            SELECT 
-                risk_score, memory_score, speech_score, eye_score, 
-                phonology_score, reading_score, writing_score, 
-                timestamp 
+            SELECT risk_score, timestamp 
             FROM patient_history 
             WHERE patient_name = %s 
             ORDER BY timestamp ASC
@@ -265,16 +261,10 @@ def get_patient_prediction(patient_name: str, type: str = Query("dementia")):
         history = cursor.fetchall()
 
         if not history:
-            return {
-                "patient_name": patient_name,
-                "history": [],
-                "prediction": 0,
-                "trend": "unknown",
-                "advice": "No history found for this patient."
-            }
+            raise HTTPException(status_code=404, detail="No history found for this patient.")
 
-        # Hand off the data AND the requested type to the Sentinel Agent
-        result = calculate_velocity_and_predict(history, scan_type=type)
+        # Run the Math + AI logic
+        result = calculate_velocity_and_predict(history)
         
         return {
             "patient_name": patient_name,
@@ -286,7 +276,7 @@ def get_patient_prediction(patient_name: str, type: str = Query("dementia")):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
-        conn.close()
+        conn.close()        
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
