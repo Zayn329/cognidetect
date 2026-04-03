@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Button } from '../ui/button'; //
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'; //
-import { HeartPulse, Loader2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { HeartPulse, Loader2, ShieldCheck, Lock, BarChart3, ArrowLeft } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../lib/firebase'; // Corrected path to root lib
+import { auth } from '../../lib/firebase';
 
 // Branding Icon for the Login Button
 const GoogleIcon = (props) => (
@@ -34,67 +33,96 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background animated-bg-pan">
-      <div className="relative flex h-full w-full max-w-5xl items-center justify-center p-4">
-        <div className="grid w-full grid-cols-1 overflow-hidden rounded-3xl border border-border bg-card shadow-2xl md:grid-cols-2">
-          
-          {/* Left Panel: Welcome Branding */}
-          <div className="relative hidden flex-col justify-between bg-primary p-12 text-white md:flex">
-            <div className="relative z-10 flex items-center gap-2 font-bold text-xl">
-              <HeartPulse className="h-8 w-8 text-white" />
-              <span>CogniDetect</span>
-            </div>
-            
-            <div className="relative z-10">
-              <h2 className="text-4xl font-black mb-4">Early Detection,<br/>Better Protection.</h2>
-              <p className="text-blue-100 text-lg">
-                Securely sign in to start your cognitive assessment and track your neurological health over time.
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#020617_0%,#0f172a_48%,#111827_100%)]">
+      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:72px_72px]" />
+      <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-cyan-500/20 blur-3xl" />
+      <div className="absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
+
+      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/95 shadow-[0_30px_90px_rgba(2,6,23,0.45)] backdrop-blur-xl lg:grid-cols-2 dark:bg-slate-950/90">
+          <aside className="relative hidden flex-col justify-between bg-[linear-gradient(155deg,#0f172a_0%,#075985_45%,#052e16_100%)] p-10 text-white lg:flex">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                  <HeartPulse className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.33em] text-white/70">Clinical Intelligence</p>
+                  <h1 className="text-2xl font-black tracking-tight">CogniDetect</h1>
+                </div>
+              </div>
+
+              <h2 className="mt-12 text-4xl font-black leading-tight">
+                Professional access
+                <span className="mt-2 block text-cyan-200">for advanced cognitive screening.</span>
+              </h2>
+              <p className="mt-5 max-w-md text-sm leading-7 text-slate-200">
+                Sign in securely to continue with clinical-grade screening, historical insights, and executive-ready reporting.
               </p>
             </div>
 
-            {/* Background design elements from your globals.css */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/20 rounded-full -ml-20 -mb-20 blur-3xl"></div>
-          </div>
+            <div className="space-y-3">
+              {[
+                { icon: <ShieldCheck className="h-4 w-4" />, text: 'Secure authentication powered by Google' },
+                { icon: <Lock className="h-4 w-4" />, text: 'Protected session and private user access' },
+                { icon: <BarChart3 className="h-4 w-4" />, text: 'Clear dashboards and professional exports' },
+              ].map((item) => (
+                <div key={item.text} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium">
+                  <span className="text-cyan-200">{item.icon}</span>
+                  <span>{item.text}</span>
+                </div>
+              ))}
+            </div>
 
-          {/* Right Panel: The actual Login Form */}
-          <div className="flex items-center justify-center p-8 md:p-16">
-            <Card className="w-full max-w-sm border-0 shadow-none">
-              <CardHeader className="text-center p-0 mb-8">
-                <CardTitle className="text-3xl font-black text-slate-900">Sign In</CardTitle>
-                <CardDescription className="text-slate-500 mt-2">
-                  Access your private diagnostic dashboard
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-6">
-                  {/* Google Login Button */}
-                  <Button 
-                    className="w-full flex items-center gap-4 h-14 rounded-2xl text-md font-bold transition-all hover:scale-[1.02]" 
-                    variant="outline" 
-                    onClick={handleGoogleLogin}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    ) : (
-                      <GoogleIcon className="h-6 w-6" />
-                    )}
-                    {isLoading ? "Connecting to Google..." : "Continue with Google"}
-                  </Button>
-                  
-                  <div className="relative py-4">
-                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100"></span></div>
-                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-slate-400 font-bold">Secure Access</span></div>
-                  </div>
+            <div className="absolute -bottom-14 -right-10 h-44 w-44 rounded-full bg-white/20 blur-3xl" />
+          </aside>
 
-                  <p className="text-center text-xs text-slate-400 leading-relaxed">
-                    By continuing, you agree to the CogniDetect Clinical Data Privacy Policy and Terms of Use.
+          <main className="flex items-center justify-center p-6 sm:p-10 lg:p-14">
+            <div className="w-full max-w-md">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Secure sign in
+              </div>
+
+              <h3 className="mt-5 text-3xl font-black text-slate-950 dark:text-white">Welcome back</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Continue to your private diagnostic workspace and start your clinical assessment flow.
+              </p>
+
+              <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+                <Button
+                  className="h-14 w-full gap-3 rounded-2xl border-slate-300 text-base font-bold"
+                  variant="outline"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  ) : (
+                    <GoogleIcon className="h-5 w-5" />
+                  )}
+                  {isLoading ? 'Connecting to Google...' : 'Continue with Google'}
+                </Button>
+
+                <div className="my-5 h-px bg-slate-200 dark:bg-white/10" />
+
+                <div className="space-y-3 text-xs text-slate-500 dark:text-slate-300">
+                  <p className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    Encrypted session and secure access controls
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-primary" />
+                    Your diagnostic data stays private to your account
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+
+              <p className="mt-6 text-center text-xs leading-6 text-slate-500 dark:text-slate-300">
+                By continuing, you agree to the CogniDetect Privacy Policy and Terms of Use.
+              </p>
+            </div>
+          </main>
         </div>
       </div>
     </div>
