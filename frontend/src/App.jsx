@@ -13,7 +13,9 @@ import {
   Brain, 
   Mic, 
   Eye, 
-  FileText 
+  FileText,
+  Stethoscope, // <--- NEW ICON for Doctor toggle
+  User         // <--- NEW ICON for Patient toggle
 } from 'lucide-react';
 
 // Specialized Modules
@@ -25,9 +27,12 @@ import EyeTracking from './components/EyeTracking.jsx';
 import ReportDashboard from './components/ReportDashboard'; 
 import PhonologyGame from './components/PhonologyGame'; 
 import ReadingTest from './components/ReadingTest'; 
-import HandwritingTest from './components/HandwritingTest'; // <--- NEW IMPORT
+import HandwritingTest from './components/HandwritingTest'; 
 import LoginPage from './components/auth/LoginPage.jsx';
 import LandingPage from './components/LandingPage.jsx';
+
+// 🔥 NEW: Import the Hospital Dashboard
+import DoctorDashboard from './components/DoctorDashboard.jsx'; 
 
 function App() {
   // 1. AUTH STATE
@@ -36,7 +41,9 @@ function App() {
   const [showLogin, setShowLogin] = useState(false);
 
   // 2. WORKFLOW STATE
-  // Default is "multimodal" to skip memory games for testing
+  // 🔥 NEW STATE: Toggle between Consumer App and Hospital B2B App
+  const [appMode, setAppMode] = useState("patient"); // "patient" or "doctor"
+
   const [step, setStep] = useState("multimodal"); 
   const [subTab, setSubTab] = useState("report"); 
 
@@ -48,7 +55,6 @@ function App() {
   // 4. DYSLEXIA DATA
   const [phonologyScore, setPhonologyScore] = useState(0);
   const [readingScore, setReadingScore] = useState(0);
-  // 🔥 THIS WAS MISSING. I HAVE ADDED IT NOW:
   const [writingScore, setWritingScore] = useState(0); 
 
   // Listen for Firebase Auth changes
@@ -79,7 +85,6 @@ function App() {
     setStep("multimodal");
   };
 
-  // --- DYSLEXIA WORKFLOW LOGIC ---
   const handleDyslexiaFinish = async (type, scoreValue) => {
     console.log(`Finished ${type} with score: ${scoreValue}`);
     
@@ -89,15 +94,14 @@ function App() {
 
     } else if (type === 'reading') {
       setReadingScore(scoreValue);
-      setStep("writing_test"); // Go to Writing Test
+      setStep("writing_test"); 
 
     } else if (type === 'writing') {
       setWritingScore(scoreValue);
-      setStep("multimodal"); // Back to Dashboard
+      setStep("multimodal"); 
       setSubTab("report");
     }
     
-    // Attempt to sync to DB (Silent fail if offline)
     try {
         if(user?.displayName) {
              await API.get(`/history/${user.displayName}`);
@@ -109,14 +113,35 @@ function App() {
 
   const avgMemoryRisk = (memoryScores.sequence + memoryScores.number) / 2;
 
-  // 🚀 PRIVATE DASHBOARD
   return (
     <div className="flex min-h-screen bg-background font-sans transition-colors duration-500">
-      <Sidebar patientName={user.displayName || "Patient"} />
+      
+      {/* Hide Sidebar if in Doctor Mode to give full width to the Dashboard */}
+      {appMode === "patient" && <Sidebar patientName={user.displayName || "Patient"} />}
 
-      <main className="ml-64 flex-1 p-8 relative">
-        {/* TOP NAV */}
-        <div className="absolute top-8 right-8 flex items-center gap-4">
+      <main className={`${appMode === "patient" ? "ml-64" : "ml-0"} flex-1 p-8 relative transition-all duration-300`}>
+        
+        {/* TOP NAV & MODE TOGGLE */}
+        <div className="absolute top-8 right-8 flex items-center gap-6 z-50">
+            
+            {/* 🔥 THE HACKATHON PITCH TOGGLE 🔥 */}
+            <div className="bg-slate-200/50 p-1 rounded-xl flex items-center shadow-inner">
+              <button 
+                onClick={() => setAppMode("patient")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${appMode === "patient" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <User size={16} /> Patient App
+              </button>
+              <button 
+                onClick={() => setAppMode("doctor")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${appMode === "doctor" ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Stethoscope size={16} /> Hospital Portal
+              </button>
+            </div>
+
+            <div className="h-8 w-px bg-slate-200"></div>
+
             <div className="text-right">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-tighter">Current User</p>
                 <p className="text-sm font-bold text-foreground">{user.displayName || user.email}</p>
@@ -126,8 +151,19 @@ function App() {
             </Button>
         </div>
 
-        {/* HEADER */}
-        <div className="max-w-4xl mx-auto mb-10">
+        {/* ========================================= */}
+        {/* VIEW 1: B2B HOSPITAL DASHBOARD (OMNI-TRIAGE) */}
+        {/* ========================================= */}
+        {appMode === "doctor" ? (
+          <div className="pt-16 fade-in-up">
+            <DoctorDashboard />
+          </div>
+        ) : (
+        
+        /* ========================================= */
+        /* VIEW 2: CONSUMER PATIENT APP (EXISTING)  */
+        /* ========================================= */
+        <div className="max-w-4xl mx-auto pt-10">
             <header className="mb-8">
                 <h1 className="text-4xl font-black text-slate-900 flex items-center gap-3">
                     <HeartPulse className="text-primary h-10 w-10" /> 
@@ -138,16 +174,14 @@ function App() {
             
             {/* PROGRESS STEPPER */}
             {step !== "dyslexia_test" && step !== "reading_test" && step !== "writing_test" && (
-                <div className="flex gap-3">
+                <div className="flex gap-3 mb-10">
                     <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['intro', 'sequence', 'number', 'multimodal'].includes(step) ? 'bg-primary' : 'bg-muted'}`} />
                     <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['sequence', 'number', 'multimodal'].includes(step) ? 'bg-primary' : 'bg-muted'}`} />
                     <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${['number', 'multimodal'].includes(step) ? 'bg-primary' : 'bg-muted'}`} />
                     <div className={`flex-1 h-2 rounded-full transition-all duration-700 ${step === 'multimodal' ? 'bg-accent' : 'bg-muted'}`} />
                 </div>
             )}
-        </div>
 
-        <div className="max-w-4xl mx-auto">
           {/* PHASE 0: SESSION START */}
           {step === "intro" && (
             <div className="bg-card p-12 rounded-3xl border border-border shadow-2xl text-center animated-bg-pan overflow-hidden relative">
@@ -200,10 +234,8 @@ function App() {
                         memoryScore={avgMemoryRisk} 
                         speechScore={speechScore} 
                         eyeScore={eyeScore} 
-                        // Dyslexia Props
                         phonologyScore={phonologyScore}
                         readingScore={readingScore}
-                        // We map "Writing Score" to RAN/Processing for now
                         writingScore={writingScore} 
                         onStartDyslexia={() => setStep("dyslexia_test")}
                     />
@@ -212,11 +244,11 @@ function App() {
             </div>
           )}
 
-          {/* PHASE 4: DYSLEXIA MODULE (Phonology) */}
+          {/* PHASE 4, 5, 6: DYSLEXIA MODULES */}
           {step === "dyslexia_test" && (
             <div className="fade-in-up">
               <Button variant="ghost" onClick={() => setStep("multimodal")} className="mb-4">
-                 ← Back to Dashboard
+                  ← Back to Dashboard
               </Button>
               <PhonologyGame 
                   patientName={user.displayName}
@@ -225,7 +257,6 @@ function App() {
             </div>
           )}
 
-          {/* PHASE 5: DYSLEXIA MODULE (Reading) */}
           {step === "reading_test" && (
             <div className="fade-in-up">
               <ReadingTest 
@@ -235,7 +266,6 @@ function App() {
             </div>
           )}
 
-          {/* PHASE 6: DYSLEXIA MODULE (Writing) */}
           {step === "writing_test" && (
             <div className="fade-in-up">
               <HandwritingTest 
@@ -243,8 +273,9 @@ function App() {
               />
             </div>
           )}
-
+          
         </div>
+        )}
       </main>
     </div>
   );

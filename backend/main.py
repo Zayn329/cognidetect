@@ -7,16 +7,18 @@ from pydantic import BaseModel
 from typing import Optional
 import shutil
 import os
+from services.triage_agent import run_triage_agent
 import cv2
+import mysql.connector
 
 # --- SERVICES ---
 from eye_reader import detect_pupil_x
-from database import get_db_connection, init_db, get_history
+from database import DB_CONFIG, get_db_connection, init_db, get_history
 from services.speech import analyze_audio_file
 from services.handwriting import analyze_handwriting
 from services.report import create_report as create_dementia_report
 from services.report_dyslexia import create_dyslexia_report # The new file
-
+from services.sentinel_agent import calculate_velocity_and_predict
 app = FastAPI()
 
 app.add_middleware(
@@ -89,7 +91,40 @@ def save_result(data: SaveResultRequest):
     finally:
         cursor.close()
         conn.close()
-
+        
+@app.post("/api/test-eye/{test_type}")
+def run_eye_test(test_type: str):
+    """
+    This endpoint triggers the LOCAL OpenCV window.
+    The HTTP request will 'hang' until the user finishes the test in the window.
+    """
+    try:
+        if test_type == "focus":
+            # Direct call to your existing logic
+            # This opens the cv2.imshow window on the server machine
+            res = run_focus_test(10) # 10 seconds duration
+            
+            if res:
+                avg_std = res.get("avg_std", 0.0)
+                avg_dist = res.get("avg_dist")
+                near_ratio = res.get("near_ratio")
+                score, level, txt = get_focus_score(avg_std, avg_dist, near_ratio)
+                return {"score": 100 - score, "details": txt}
+            
+        elif test_type == "follow":
+            res = run_follow_dot_test(10)
+            
+            if res:
+                avg_error = res.get("avg_error", 0.0)
+                hit_ratio = res.get("hit_ratio")
+                score, level, txt = get_follow_dot_score(avg_error, hit_ratio)
+                return {"score": 100 - score, "details": txt}
+                
+        return {"score": 0, "details": "Test failed or cancelled"}
+        
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
 # --- REPORT GENERATOR ---
 @app.get("/api/generate-report/{patient_name}")
 def generate_pdf_report(patient_name: str, type: str = "dementia"):
@@ -149,10 +184,97 @@ def read_root(): return {"status": "Running"}
 def get_patient_history(patient_name: str): return get_history(patient_name)
 
 @app.post("/api/analyze-speech")
-def analyze_speech(file: UploadFile = File(...)):
-    # ... (Keep existing logic)
-    return {"risk_score": 0, "details": "Speech analysis placeholder"}
+async def analyze_speech(file: UploadFile = File(...)):
+    try:
+        # Save file temporarily
+        temp_path = f"temp_{file.filename}"
 
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # 🔥 THIS IS THE MISSING LINE
+        risk_score, details = analyze_audio_file(temp_path)
+
+        # Delete temp file
+        os.remove(temp_path)
+
+        return {
+            "risk_score": risk_score,
+            "details": details
+        }
+
+    except Exception as e:
+        print(f"Speech Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+ 
+@app.get("/api/agent/triage")
+def trigger_omni_triage():
+    try:
+        # 1. Connect to your actual MySQL Database
+        conn = mysql.connector.connect(**DB_CONFIG) 
+        
+        # dictionary=True is crucial! It makes the data easy for Gemini to read
+        cursor = conn.cursor(dictionary=True) 
+        
+        # 2. Fetch the latest 10 real patients 
+        # (We limit to 10 so the AI generates the JSON instantly for the demo)
+        query = """
+            SELECT id, patient_name, risk_score, speech_score, eye_score, writing_score, notes 
+            FROM patient_history 
+            ORDER BY timestamp DESC 
+            LIMIT 10
+        """
+        cursor.execute(query)
+        real_patients = cursor.fetchall()
+        
+        if not real_patients:
+            return {"status": "error", "message": "No patients in DB. Run seed_db.py!"}
+
+        # 3. Hand the REAL data to the Agent
+        ai_sorted_queue = run_triage_agent(real_patients)
+        
+        # 4. Return to React
+        return ai_sorted_queue
+
+    except Exception as e:
+        print(f"Triage Endpoint Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals() and conn.is_connected(): conn.close()
+@app.get("/api/agent/predict/{patient_name}")
+def get_patient_prediction(patient_name: str):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    try:
+        # Fetch all historical scores for this patient, oldest to newest
+        query = """
+            SELECT risk_score, timestamp 
+            FROM patient_history 
+            WHERE patient_name = %s 
+            ORDER BY timestamp ASC
+        """
+        cursor.execute(query, (patient_name,))
+        history = cursor.fetchall()
+
+        if not history:
+            raise HTTPException(status_code=404, detail="No history found for this patient.")
+
+        # Run the Math + AI logic
+        result = calculate_velocity_and_predict(history)
+        
+        return {
+            "patient_name": patient_name,
+            **result
+        }
+
+    except Exception as e:
+        print(f"Prediction Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()        
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
