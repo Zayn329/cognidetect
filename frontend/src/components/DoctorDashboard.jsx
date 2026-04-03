@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import { 
   Activity, 
   AlertCircle, 
@@ -8,7 +9,9 @@ import {
   ArrowUpRight, 
   Search,
   Zap,
-  ShieldAlert
+  ShieldAlert,
+  Stethoscope,   // <--- Added this to stop the crash!
+  AlertTriangle  // <--- Added this to stop the crash!
 } from 'lucide-react';
 import API from '../api'; 
 
@@ -144,8 +147,10 @@ const StatCard = ({ title, value, icon, color }) => (
   </div>
 );
 
+
 const PatientRow = ({ patient }) => {
   const isCritical = patient.status === "Critical";
+  const hasAnomaly = patient.clinical_anomaly && patient.clinical_anomaly !== "None";
   
   return (
     <div className="p-5 hover:bg-slate-50 transition-colors group">
@@ -156,7 +161,14 @@ const PatientRow = ({ patient }) => {
           </div>
           <div>
             <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{patient.name}</h4>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">ID: #{patient.id}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">ID: #{patient.id}</span>
+              
+              {/* 🔥 NEW: Specialist Routing Badge */}
+              <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                <Stethoscope size={10} /> {patient.recommended_specialist}
+              </span>
+            </div>
           </div>
         </div>
         <div className="text-right">
@@ -181,15 +193,26 @@ const PatientRow = ({ patient }) => {
             />
           </div>
         </div>
-        <div className="col-span-9 bg-slate-50 p-3 rounded-xl border border-slate-100 italic text-xs text-slate-600 leading-relaxed relative">
-          <ArrowUpRight className="absolute top-2 right-2 text-slate-300" size={14} />
-          "{patient.summary}"
+        
+        <div className="col-span-9 space-y-2">
+            {/* The standard Summary */}
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 italic text-xs text-slate-600 leading-relaxed relative">
+              <ArrowUpRight className="absolute top-2 right-2 text-slate-300" size={14} />
+              "{patient.summary}"
+            </div>
+            
+            {/* 🔥 NEW: Anomaly Alert Banner */}
+            {hasAnomaly && (
+              <div className="flex items-start gap-2 bg-amber-50 text-amber-800 p-2 rounded-lg text-[11px] font-medium border border-amber-200">
+                <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <span><strong className="font-bold text-amber-900">Clinical Anomaly Detected:</strong> {patient.clinical_anomaly}</span>
+              </div>
+            )}
         </div>
       </div>
     </div>
   );
 };
-
 const ActivityItem = ({ time, text, color = "text-slate-400" }) => (
   <div className="flex gap-3">
     <div className="w-1 bg-indigo-500 rounded-full" />
