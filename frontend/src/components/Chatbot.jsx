@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { MessageCircle, X, Send, Loader } from 'lucide-react';
-import { motion } from "framer-motion";
-import API from '../api'; // 🔥 IMPORT YOUR API CONFIG
+import API from '../api'; // 🔥 Ensure this points to your Axios config!
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
