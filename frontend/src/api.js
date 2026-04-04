@@ -3,11 +3,9 @@ import axios from 'axios';
 // Create a centralized Axios instance
 const API = axios.create({
   // Point this to Person 1's FastAPI server port (usually 8000)
-  // baseURL: 'http://localhost:8000/api', 
-  baseURL: 'https://rude-paths-battle.loca.lt/api', // Update this if Person 1's server is on a different port
+  baseURL: 'http://localhost:8000/api', 
   headers: {
     'Content-Type': 'application/json',
-    "Bypass-Tunnel-Reminder": "true"
   },
 });
 

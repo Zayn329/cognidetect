@@ -6,7 +6,7 @@ import parselmouth
 from parselmouth.praat import call
 
 # Model Path (Ensure this .pkl file is in the root backend folder or adjust path)
-MODEL_PATH = "alzheimers_speech_model.pkl"
+MODEL_PATH = "alzheimers2_speech_model.pkl"
 
 _speech_model = None
 

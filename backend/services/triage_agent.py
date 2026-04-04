@@ -10,7 +10,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def run_triage_agent(real_patient_data):
     try:
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         db_string = json.dumps(real_patient_data)
         
         prompt = f"""

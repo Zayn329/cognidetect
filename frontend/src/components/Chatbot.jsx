@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Loader } from 'lucide-react';
-import { Button } from './ui/button';
 import { motion } from "framer-motion";
+import API from '../api'; // 🔥 IMPORT YOUR API CONFIG
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,37 +30,38 @@ export default function Chatbot() {
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response with advanced responses
-    setTimeout(() => {
-      const responses = [
-        'That\'s a great question! CogniDetect uses advanced AI to assess cognitive abilities across multiple dimensions.',
-        'Our platform provides comprehensive screening for memory, speech, eye tracking, and dyslexia detection.',
-        'You can start an assessment anytime from your dashboard. Each test takes about 5 minutes.',
-        'We maintain the highest standards of data security and HIPAA compliance for all patient information.',
-        'The premium subscription includes unlimited assessments, detailed analytics, and personalized recommendations.',
-        'Our AI-powered reporting system generates clinical-grade reports for healthcare professionals.',
-        'You can track your cognitive performance over time with our advanced analytics dashboard.',
-        'The chatbot is available 24/7 to answer your questions about CogniDetect features and assessments.'
-      ];
+    try {
+      // 🔥 ACTUAL API CALL TO YOUR PYTHON BACKEND
+      const response = await API.post('/chatbot', { message: text });
       
       const botTime = new Date();
       const botMessage = {
         id: botTime.getTime() + 1,
-        text: responses[Math.floor(Math.random() * responses.length)],
+        text: response.data.reply, // Get the Gemini response
         sender: 'bot',
         timestamp: botTime
       };
       
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Chatbot API Error:", error);
+      const errorMessage = {
+        id: new Date().getTime() + 1,
+        text: "Sorry, I am having trouble connecting to the CogniDetect servers right now.",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const quickResponses = [
-    'How to start?',
-    'Premium features',
-    'Pricing info',
-    'Contact support'
+    'What features do you offer?',
+    'Tell me about Dementia screening',
+    'How does Omni-Triage work?',
+    'What is the Sentinel AI?'
   ];
 
   return (
@@ -139,7 +140,8 @@ export default function Chatbot() {
                         : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-none'
                     }`}
                   >
-                    <p className="text-sm">{msg.text}</p>
+                    {/* The whitespace-pre-wrap ensures bullet points from Gemini render correctly */}
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                     <span className="text-xs opacity-60 mt-1 block">
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -155,7 +157,7 @@ export default function Chatbot() {
                 >
                   <div className="bg-slate-800 text-slate-200 px-4 py-2 rounded-lg rounded-bl-none border border-slate-700 flex items-center gap-2">
                     <Loader className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">Thinking...</span>
+                    <span className="text-sm">Analyzing query...</span>
                   </div>
                 </motion.div>
               )}
@@ -194,7 +196,7 @@ export default function Chatbot() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(input)}
-                placeholder="Type your message..."
+                placeholder="Ask me about CogniDetect..."
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
               />
               <motion.button
